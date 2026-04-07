@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Letter Boxed Solver | Solve NYT Puzzle Instantly Online</title>
+<meta name="description" content="Solve NYT Letter Boxed puzzles instantly with our fast online solver. Find 2-word and 3-word solutions in seconds. Totally free to use.">
+<link rel="canonical" href="https://yourdomain.com/letter-boxed-solver">
+
+<style>
+:root {
+  --bg: linear-gradient(135deg, #e0e7ff, #f0f9ff);
+  --card: rgba(255,255,255,0.7);
+  --accent: #4f46e5;
+  --accent2: #06b6d4;
+  --text: #0f172a;
+  --muted: #64748b;
+  --border: rgba(0,0,0,0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 520px;
+  margin: auto;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 24px;
+  margin-bottom: 15px;
+}
+
+.card {
+  background: var(--card);
+  backdrop-filter: blur(10px);
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+input {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: white;
+  color: var(--text);
+  font-size: 16px;
+  text-align: center;
+  text-transform: uppercase;
+  transition: 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 8px rgba(79,70,229,0.3);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  border: none;
+  font-size: 16px;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  font-weight: 600;
+}
+
+.primary:hover {
+  transform: scale(1.03);
+}
+
+.secondary {
+  background: rgba(0,0,0,0.05);
+  color: var(--text);
+}
+
+.secondary:hover {
+  background: rgba(0,0,0,0.1);
+}
+
+.result-card {
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: uppercase;
+  background: rgba(79,70,229,0.1);
+  border: 1px solid rgba(79,70,229,0.2);
+}
+
+.loader {
+  text-align: center;
+  padding: 10px;
+  color: var(--muted);
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>📦 Letter Boxed Solver</h1>
+
+<div class="card">
+    
+<p>Looking for a faster and smarter way to solve tricky word puzzles? Our Letter Boxed Solver helps you generate accurate word chains instantly, removing the need for guesswork. It analyzes letter patterns to deliver optimal solutions, making it easier to find <a href="https://letterboxdsolver.com/" target="_blank"><strong>Todays Answer</strong></a> quickly and efficiently.So you can stay ahead every time you play.</p>
+</div>
+
+<div class="grid">
+  <input id="left" placeholder="Left (3 letters)" maxlength="3">
+  <input id="top" placeholder="Top (3 letters)" maxlength="3">
+  <input id="right" placeholder="Right (3 letters)" maxlength="3">
+  <input id="bottom" placeholder="Bottom (3 letters)" maxlength="3">
+</div>
+
+<button class="primary" onclick="solve()">Solve 🚀</button>
+<button class="secondary" onclick="clearAll()">Clear 🧹</button>
+
+<div id="results"></div>
+
+<script>
+let WORDS = [];
+const EASY_URL = "https://raw.githubusercontent.com/eddiesamule250/easy/refs/heads/main/words_easy.json";
+const HARD_URL = "https://raw.githubusercontent.com/eddiesamule250/hard/refs/heads/main/words_hard.json";
+
+async function loadWords() {
+  try {
+    const res = await fetch(EASY_URL);
+    WORDS = await res.json();
+  } catch {
+    alert("Failed to load dictionary");
+  }
+}
+
+async function loadHard() {
+  if (window.hardLoaded) return;
+  showLoader("Loading bigger dictionary...");
+  const res = await fetch(HARD_URL);
+  const hard = await res.json();
+  WORDS = WORDS.concat(hard);
+  window.hardLoaded = true;
+}
+
+loadWords();
+
+function showLoader(text) {
+  document.getElementById("results").innerHTML = `<div class="loader">${text}</div>`;
+}
+
+function cleanInput(value) {
+  return value.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function validateInputs(left, top, right, bottom) {
+  if (left.length !== 3 || top.length !== 3 || right.length !== 3 || bottom.length !== 3) {
+    alert("Each box must contain exactly 3 letters.");
+    return false;
+  }
+  return true;
+}
+
+function buildMap(left, top, right, bottom) {
+  const map = {};
+  for (let c of left) map[c] = 0;
+  for (let c of top) map[c] = 1;
+  for (let c of right) map[c] = 2;
+  for (let c of bottom) map[c] = 3;
+  return map;
+}
+
+function bitmask(word, indexMap) {
+  let m = 0;
+  for (let c of word) m |= (1 << indexMap[c]);
+  return m;
+}
+
+async function solve() {
+  if (!WORDS.length) return alert("Loading...");
+
+  showLoader("Solving...");
+
+  const left = cleanInput(leftEl.value);
+  const top = cleanInput(topEl.value);
+  const right = cleanInput(rightEl.value);
+  const bottom = cleanInput(bottomEl.value);
+
+  if (!validateInputs(left, top, right, bottom)) return;
+
+  const letters = [...new Set((left+top+right+bottom).split(""))];
+  const indexMap = {};
+  letters.forEach((c,i)=>indexMap[c]=i);
+
+  const FULL = (1<<letters.length)-1;
+  const side = buildMap(left, top, right, bottom);
+
+  let valid = [];
+
+  for (let w of WORDS) {
+    if (!w || w.length < 3) continue;
+
+    let ok = true;
+
+    for (let i=1;i<w.length;i++)
+      if (side[w[i]] === side[w[i-1]]) { ok=false; break; }
+
+    if (!ok) continue;
+
+    for (let c of w)
+      if (!(c in indexMap)) { ok=false; break; }
+
+    if (!ok) continue;
+
+    valid.push({ w, s:w[0], e:w[w.length-1], m:bitmask(w,indexMap) });
+  }
+
+  const byStart = {};
+  valid.forEach(v=>{
+    (byStart[v.s] ||= []).push(v);
+  });
+
+  let res = [];
+
+  valid.forEach(a=>{
+    (byStart[a.e]||[]).forEach(b=>{
+      if((a.m|b.m)===FULL) res.push(`${a.w} → ${b.w}`);
+    });
+  });
+
+  valid.forEach(a=>{
+    (byStart[a.e]||[]).forEach(b=>{
+      let m=a.m|b.m;
+      if(m===FULL) return;
+      (byStart[b.e]||[]).forEach(c=>{
+        if((m|c.m)===FULL)
+          res.push(`${a.w} → ${b.w} → ${c.w}`);
+      });
+    });
+  });
+
+  if (!res.length && !window.hardLoaded) {
+    await loadHard();
+    return solve();
+  }
+
+  const el = document.getElementById("results");
+
+  if(!res.length) {
+    el.innerHTML = '<div class="card">No solutions 😢</div>';
+    return;
+  }
+
+  el.innerHTML = res.slice(0,100)
+    .map(r=>`<div class="card result-card">${r}</div>`)
+    .join("");
+}
+
+const leftEl = document.getElementById("left");
+const topEl = document.getElementById("top");
+const rightEl = document.getElementById("right");
+const bottomEl = document.getElementById("bottom");
+
+function clearAll() {
+  leftEl.value = "";
+  topEl.value = "";
+  rightEl.value = "";
+  bottomEl.value = "";
+  document.getElementById("results").innerHTML = "";
+}
+</script>
+
+</body>
+</html>
